@@ -34,17 +34,8 @@ let noiseScale = 0.1; // ノイズの細かさ（小さいほど隣り合う点�
 let noiseSpeed = 0.003; // ノイズの時間変化速度（緩やかさ。小さいほどゆっくり揺れる）
 let noisePhaseSpread = 0.001; // 点ごとの時間位相のずらし幅（0だと全点が同時に折り返す。大きいほど波が伝わるように見える）
 
-let noiseMin = 0, noiseMax = 90; // ノイズの強さスライダーの範囲（アニメーションでも使う）
-let noiseAnimActive = false;
-let noiseAnimStartTime = 0;
-let noiseAnimDurationMs = 5000; // 最小→最大→最小の1往復にかける時間
-
-let noiseSpeedAnimMin = 0.006, noiseSpeedAnimMax = 0.006; // ノイズの強さと連動する速さの範囲（強さ最大→速さ最小、強さ最小→速さ最大）
-
-let sizeMin = 0, sizeMax = 50; // 円のサイズスライダーの範囲（アニメーションでも使う）
-let sizeAnimActive = false;
-let sizeAnimStartTime = 0;
-let sizeAnimDurationMs = 5000; // 最小→最大→最小の1往復にかける時間
+let noiseMin = 0, noiseMax = 90; // ノイズの強さスライダーの範囲
+let sizeMin = 0, sizeMax = 50; // 円のサイズスライダーの範囲
 
 function setup() {
   let cnv = createCanvas(400, 400);
@@ -98,29 +89,7 @@ function createControlPanel() {
   noisePhaseSpreadSlider = addSliderRow(panel, '折り返しのずらし', 0, 0.1, noisePhaseSpread, 0.001);
   blurSlider = addSliderRow(panel, 'ぼかしの強さ', 0, 10, blurAmount, 0.1);
 
-  let animButton = createButton('ノイズ強さアニメーション');
-  animButton.parent(panel);
-  animButton.style('display', 'block');
-  animButton.style('margin-top', '4px');
-  animButton.mousePressed(startNoiseAnimation);
-
-  let sizeAnimButton = createButton('円のサイズアニメーション');
-  sizeAnimButton.parent(panel);
-  sizeAnimButton.style('display', 'block');
-  sizeAnimButton.style('margin-top', '4px');
-  sizeAnimButton.mousePressed(startSizeAnimation);
-
   lastCircleDensity = circleDensity;
-}
-
-function startNoiseAnimation() {
-  noiseAnimActive = !noiseAnimActive;
-  if (noiseAnimActive) noiseAnimStartTime = millis();
-}
-
-function startSizeAnimation() {
-  sizeAnimActive = !sizeAnimActive;
-  if (sizeAnimActive) sizeAnimStartTime = millis();
 }
 
 function addSliderRow(parent, labelText, min, max, value, step) {
@@ -292,42 +261,8 @@ function draw() {
   noisePhaseSpread = noisePhaseSpreadSlider.value();
   blurAmount = blurSlider.value();
 
-  if (sizeAnimActive) {
-    let elapsed = millis() - sizeAnimStartTime;
-    let p = (elapsed % sizeAnimDurationMs) / sizeAnimDurationMs; // 0→1 を繰り返す（ループ）
-
-    if (p < 0.5) {
-      let localT = p / 0.5; // 0→1（往路）
-      circleSize = lerp(sizeMin, sizeMax, applyEasing(localT));
-    } else {
-      let localT = (p - 0.5) / 0.5; // 0→1（復路）
-      circleSize = lerp(sizeMax, sizeMin, applyEasing(localT));
-    }
-    sizeSlider.value(circleSize); // スライダーの見た目も同期させる
-  } else {
-    circleSize = sizeSlider.value();
-  }
-
-  if (noiseAnimActive) {
-    let elapsed = millis() - noiseAnimStartTime;
-    let p = (elapsed % noiseAnimDurationMs) / noiseAnimDurationMs; // 0→1 を繰り返す（ループ）
-
-    if (p < 0.5) {
-      let localT = p / 0.5; // 0→1（往路）
-      noiseStrength = lerp(noiseMin, noiseMax, applyEasing(localT));
-    } else {
-      let localT = (p - 0.5) / 0.5; // 0→1（復路）
-      noiseStrength = lerp(noiseMax, noiseMin, applyEasing(localT));
-    }
-    noiseSlider.value(noiseStrength); // スライダーの見た目も同期させる
-
-    // ノイズの強さと速さを連動させる（強さ最大の時は速さ最小、強さ最小の時は速さ最大）
-    let strengthFrac = (noiseStrength - noiseMin) / (noiseMax - noiseMin);
-    noiseSpeed = lerp(noiseSpeedAnimMax, noiseSpeedAnimMin, strengthFrac);
-    noiseSpeedSlider.value(noiseSpeed); // スライダーの見た目も同期させる
-  } else {
-    noiseStrength = noiseSlider.value();
-  }
+  circleSize = sizeSlider.value();
+  noiseStrength = noiseSlider.value();
 
   let newDensity = densitySlider.value();
   if (newDensity !== lastCircleDensity) {

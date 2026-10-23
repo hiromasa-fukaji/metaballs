@@ -26,8 +26,6 @@ let metaballStroke5Weight = 4.1;    // 縁取り5（一番外側）の太さ（0
 let metaballStroke5Color = "#000000"; // 縁取り5の色
 let blurAmount = 0; // ぼかしフィルターの強さ
 
-let sizeSlider, densitySlider, noiseSlider, strokeSlider, strokeSlider2, strokeSlider3, strokeSlider4, strokeSlider5, noiseScaleSlider, noiseSpeedSlider, noisePhaseSpreadSlider, blurSlider;
-let fillColorPicker, strokeColorPicker, strokeColorPicker2, strokeColorPicker3, strokeColorPicker4, strokeColorPicker5;
 let lastCircleDensity;
 
 let noiseScale = 0.1; // ノイズの細かさ（小さいほど隣り合う点の動きが揃って滑らかに、大きいほどバラバラに）
@@ -37,8 +35,12 @@ let noisePhaseSpread = 0.001; // 点ごとの時間位相のずらし幅（0だ�
 let noiseMin = 0, noiseMax = 90; // ノイズの強さスライダーの範囲
 let sizeMin = 0, sizeMax = 50; // 円のサイズスライダーの範囲
 
+// --- キャンバスサイズ ---
+const INITIAL_W = 630;
+const INITIAL_H = 891;
+
 function setup() {
-  let cnv = createCanvas(400, 400);
+  let cnv = createCanvas(INITIAL_W, INITIAL_H);
   cnv.parent('sketch-holder');
   pg = createGraphics(width, height);
   pgStroke = createGraphics(width, height);
@@ -52,96 +54,58 @@ function setup() {
   createControlPanel();
 }
 
+// 値の本体は PARAMS(Tweakpaneが書き換える)。毎フレーム syncParams() で下のグローバル変数へ写して使う。
+const PARAMS = {
+  circleSize: circleSize,
+  circleDensity: circleDensity,
+  noiseStrength: noiseStrength,
+  metaballColor: metaballColor,
+  strokeWeight: metaballStrokeWeight,
+  strokeColor: metaballStrokeColor,
+  stroke2Weight: metaballStroke2Weight,
+  stroke2Color: metaballStroke2Color,
+  stroke3Weight: metaballStroke3Weight,
+  stroke3Color: metaballStroke3Color,
+  stroke4Weight: metaballStroke4Weight,
+  stroke4Color: metaballStroke4Color,
+  stroke5Weight: metaballStroke5Weight,
+  stroke5Color: metaballStroke5Color,
+  noiseScale: noiseScale,
+  noiseSpeed: noiseSpeed,
+  noisePhaseSpread: noisePhaseSpread,
+  blurAmount: blurAmount,
+};
+
+let pane;
+
 function createControlPanel() {
-  let panel = createDiv();
-  panel.position(10, 10);
-  panel.style('background', 'rgba(255,255,255,0.9)');
-  panel.style('border', '1px solid #ccc');
-  panel.style('border-radius', '8px');
-  panel.style('padding', '10px');
-  panel.style('font-family', 'sans-serif');
-  panel.style('font-size', '12px');
-  panel.style('z-index', '99999');
+  pane = new Tweakpane.Pane({
+    title: 'METABALL',
+    container: document.getElementById('pane-holder')
+  });
 
-  sizeSlider = addSliderRow(panel, '円のサイズ', sizeMin, sizeMax, circleSize, 0.1);
-  densitySlider = addSliderRow(panel, '円の密度', 0.5, 50, circleDensity, 0.1);
-  noiseSlider = addSliderRow(panel, 'ノイズの強さ', noiseMin, noiseMax, noiseStrength, 0.1);
+  const shape = pane.addFolder({ title: 'Shape' });
+  shape.addBinding(PARAMS, 'circleSize', { label: 'circle size', min: sizeMin, max: sizeMax, step: 0.1 });
+  shape.addBinding(PARAMS, 'circleDensity', { label: 'density', min: 0.5, max: 50, step: 0.1 });
+  shape.addBinding(PARAMS, 'metaballColor', { label: 'fill' });
 
-  fillColorPicker = addColorPickerRow(panel, '塗りの色', metaballColor);
+  const stroke = pane.addFolder({ title: 'Stroke' });
+  for (const n of ['', '2', '3', '4', '5']) {
+    const label = n || '1';
+    stroke.addBinding(PARAMS, 'stroke' + n + 'Weight', { label: 'weight ' + label, min: 0, max: 30, step: 0.1 });
+    stroke.addBinding(PARAMS, 'stroke' + n + 'Color', { label: 'color ' + label });
+  }
 
-  strokeSlider = addSliderRow(panel, '縁取り1の太さ', 0, 30, metaballStrokeWeight, 0.1);
-  strokeColorPicker = addColorPickerRow(panel, '縁取り1の色', metaballStrokeColor);
+  const noiseF = pane.addFolder({ title: 'Noise' });
+  noiseF.addBinding(PARAMS, 'noiseStrength', { label: 'strength', min: noiseMin, max: noiseMax, step: 0.1 });
+  noiseF.addBinding(PARAMS, 'noiseScale', { label: 'scale', min: 0, max: 1, step: 0.01 });
+  noiseF.addBinding(PARAMS, 'noiseSpeed', { label: 'speed', min: 0, max: 0.01, step: 0.001 });
+  noiseF.addBinding(PARAMS, 'noisePhaseSpread', { label: 'phase spread', min: 0, max: 0.1, step: 0.001 });
 
-  strokeSlider2 = addSliderRow(panel, '縁取り2の太さ', 0, 30, metaballStroke2Weight, 0.1);
-  strokeColorPicker2 = addColorPickerRow(panel, '縁取り2の色', metaballStroke2Color);
-
-  strokeSlider3 = addSliderRow(panel, '縁取り3の太さ', 0, 30, metaballStroke3Weight, 0.1);
-  strokeColorPicker3 = addColorPickerRow(panel, '縁取り3の色', metaballStroke3Color);
-
-  strokeSlider4 = addSliderRow(panel, '縁取り4の太さ', 0, 30, metaballStroke4Weight, 0.1);
-  strokeColorPicker4 = addColorPickerRow(panel, '縁取り4の色', metaballStroke4Color);
-
-  strokeSlider5 = addSliderRow(panel, '縁取り5の太さ', 0, 30, metaballStroke5Weight, 0.1);
-  strokeColorPicker5 = addColorPickerRow(panel, '縁取り5の色', metaballStroke5Color);
-
-  noiseScaleSlider = addSliderRow(panel, 'ノイズの細かさ', 0, 1, noiseScale, 0.01);
-  noiseSpeedSlider = addSliderRow(panel, 'ノイズの速さ', 0, 0.01, noiseSpeed, 0.001);
-  noisePhaseSpreadSlider = addSliderRow(panel, '折り返しのずらし', 0, 0.1, noisePhaseSpread, 0.001);
-  blurSlider = addSliderRow(panel, 'ぼかしの強さ', 0, 10, blurAmount, 0.1);
+  const fx = pane.addFolder({ title: 'Effect' });
+  fx.addBinding(PARAMS, 'blurAmount', { label: 'blur', min: 0, max: 10, step: 0.1 });
 
   lastCircleDensity = circleDensity;
-}
-
-function addSliderRow(parent, labelText, min, max, value, step) {
-  let row = createDiv();
-  row.parent(parent);
-  row.style('margin-bottom', '8px');
-
-  let label = createSpan(labelText + ': ');
-  label.parent(row);
-
-  let valueLabel = createSpan(String(value));
-  valueLabel.parent(row);
-  valueLabel.style('float', 'right');
-
-  let slider = createSlider(min, max, value, step);
-  slider.parent(row);
-  slider.style('width', '160px');
-  slider.style('display', 'block');
-
-  slider.input(() => {
-    valueLabel.html(slider.value());
-  });
-
-  return slider;
-}
-
-// 色ピッカーと現在のHEXコード表示をセットにした行を作る
-function addColorPickerRow(parent, labelText, defaultColor) {
-  let row = createDiv();
-  row.parent(parent);
-  row.style('margin-bottom', '8px');
-  row.style('display', 'flex');
-  row.style('align-items', 'center');
-  row.style('justify-content', 'space-between');
-
-  let label = createSpan(labelText + ': ');
-  label.parent(row);
-
-  let picker = createColorPicker(defaultColor);
-  picker.parent(row);
-  picker.style('margin-left', '8px');
-
-  let hexLabel = createSpan(defaultColor);
-  hexLabel.parent(row);
-  hexLabel.style('margin-left', '8px');
-  hexLabel.style('font-family', 'monospace');
-
-  picker.input(() => {
-    hexLabel.html(picker.value());
-  });
-
-  return picker;
 }
 
 // SVGの読み込みが完了したら、パス上の点を最終的なキャンバス座標に変換して1回だけ集める
@@ -245,26 +209,26 @@ function recolorMask(target, hexColor) {
 }
 
 function draw() {
-  metaballStrokeWeight = strokeSlider.value();
-  metaballStroke2Weight = strokeSlider2.value();
-  metaballStroke3Weight = strokeSlider3.value();
-  metaballStroke4Weight = strokeSlider4.value();
-  metaballStroke5Weight = strokeSlider5.value();
-  metaballColor = fillColorPicker.value();
-  metaballStrokeColor = strokeColorPicker.value();
-  metaballStroke2Color = strokeColorPicker2.value();
-  metaballStroke3Color = strokeColorPicker3.value();
-  metaballStroke4Color = strokeColorPicker4.value();
-  metaballStroke5Color = strokeColorPicker5.value();
-  noiseScale = noiseScaleSlider.value();
-  noiseSpeed = noiseSpeedSlider.value();
-  noisePhaseSpread = noisePhaseSpreadSlider.value();
-  blurAmount = blurSlider.value();
+  metaballStrokeWeight = PARAMS.strokeWeight;
+  metaballStroke2Weight = PARAMS.stroke2Weight;
+  metaballStroke3Weight = PARAMS.stroke3Weight;
+  metaballStroke4Weight = PARAMS.stroke4Weight;
+  metaballStroke5Weight = PARAMS.stroke5Weight;
+  metaballColor = PARAMS.metaballColor;
+  metaballStrokeColor = PARAMS.strokeColor;
+  metaballStroke2Color = PARAMS.stroke2Color;
+  metaballStroke3Color = PARAMS.stroke3Color;
+  metaballStroke4Color = PARAMS.stroke4Color;
+  metaballStroke5Color = PARAMS.stroke5Color;
+  noiseScale = PARAMS.noiseScale;
+  noiseSpeed = PARAMS.noiseSpeed;
+  noisePhaseSpread = PARAMS.noisePhaseSpread;
+  blurAmount = PARAMS.blurAmount;
 
-  circleSize = sizeSlider.value();
-  noiseStrength = noiseSlider.value();
+  circleSize = PARAMS.circleSize;
+  noiseStrength = PARAMS.noiseStrength;
 
-  let newDensity = densitySlider.value();
+  let newDensity = PARAMS.circleDensity;
   if (newDensity !== lastCircleDensity) {
     lastCircleDensity = newDensity;
     circleDensity = newDensity;

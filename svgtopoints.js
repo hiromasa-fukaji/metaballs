@@ -23,7 +23,16 @@ class SvgToPoints {
         throw new Error(`Failed to fetch SVG: ${response.status}`);
       }
 
-      const svgText = await response.text();
+      this.loadText(await response.text());
+    } catch (error) {
+      this.loadError = error;
+      console.error("SvgToPoints Load Error:", error);
+    }
+  }
+
+  // SVGの文字列から直接読み込む（ファイル選択・ドロップ用）。失敗時は loadError に入れて例外は投げない
+  loadText(svgText) {
+    try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(svgText, "image/svg+xml");
       const svgEl = doc.querySelector("svg");

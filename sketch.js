@@ -144,6 +144,9 @@ function createControlPanel() {
     stroke.addBinding(PARAMS, 'stroke' + n + 'Color', { label: 'color ' + label });
   }
 
+  stroke.addButton({ title: 'Random Colors' }).on('click', randomizeStrokeColors);
+  stroke.addButton({ title: 'Random Weights' }).on('click', randomizeStrokeWeights);
+
   const noiseF = pane.addFolder({ title: 'Noise' });
   noiseF.addBinding(PARAMS, 'noiseStrength', { label: 'strength', min: noiseMin, max: noiseMax, step: 0.1 });
   noiseF.addBinding(PARAMS, 'noiseScale', { label: 'scale', min: 0, max: 1, step: 0.01 });
@@ -263,6 +266,27 @@ function undoLast() {
     clearSvg();
   }
   rebuildPoints();
+}
+
+// 縁取り1〜5の色をすべてランダムに変える（塗りの色は変えない）
+function randomizeStrokeColors() {
+  for (const n of ['', '2', '3', '4', '5']) {
+    PARAMS['stroke' + n + 'Color'] = '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0');
+  }
+  pane.refresh();
+  saveParams();
+}
+
+// 縁取り1〜5の太さをすべてランダムに変える。5層が重なるので、スライダー上限(30)ではなく控えめな範囲にする
+const RANDOM_WEIGHT_MIN = 0.5, RANDOM_WEIGHT_MAX = 20;
+
+function randomizeStrokeWeights() {
+  for (const n of ['', '2', '3', '4', '5']) {
+    const w = RANDOM_WEIGHT_MIN + Math.random() * (RANDOM_WEIGHT_MAX - RANDOM_WEIGHT_MIN);
+    PARAMS['stroke' + n + 'Weight'] = Math.round(w * 10) / 10; // スライダーの刻み(0.1)に合わせる
+  }
+  pane.refresh();
+  saveParams();
 }
 
 function clearSvg() {

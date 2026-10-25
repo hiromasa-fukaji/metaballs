@@ -128,7 +128,7 @@ function createControlPanel() {
   circleDensity = PARAMS.circleDensity;
 
   pane = new Tweakpane.Pane({
-    title: 'METABALL',
+    title: 'Metaballs',
     container: document.getElementById('pane-holder')
   });
 
